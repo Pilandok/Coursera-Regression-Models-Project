@@ -1,12 +1,13 @@
 library(car)
 library(ggplot2)
-library(GGAlly)
+library(dplyr)
+#library(GGAlly)
 data(mtcars)
-mtcars$cyl <- factor(mtcars$cyl)
-mtcars$vs <- factor(mtcars$vs)
-mtcars$gear <- factor(mtcars$gear)
-mtcars$carb <- factor(mtcars$carb)
-mtcars$am <- factor(mtcars$am, labels = c("Automatic", "Manual"))
+#mtcars$cyl <- factor(mtcars$cyl)
+#mtcars$vs <- factor(mtcars$vs)
+#mtcars$gear <- factor(mtcars$gear)
+#mtcars$carb <- factor(mtcars$carb)
+#mtcars$am <- factor(mtcars$am, labels = c("Automatic", "Manual"))
 str(mtcars)
 
 
@@ -36,7 +37,7 @@ abline(mtcars$wt, mtcars$qsec)
 plot(mtcars$wt, mtcars.resid, ylab="Residuals", xlab="Weight", main="mtcars weight") 
 
 
-ggplot(mtcars, aes(x=wt, y=hp)) +
+ggplot(mtcars, aes(x=wt, y=qsec)) +
   geom_point(shape=1) +    # Use hollow circles
   geom_smooth()            # Add a loess smoothed fit curve with confidence region
 
