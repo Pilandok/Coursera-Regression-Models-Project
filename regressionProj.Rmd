@@ -9,15 +9,12 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+# Objective
 Instructions
 
+Determine whether automatic or manual transmission better for MPG.
 
-
-"Is an automatic or manual transmission better for MPG"
-
-"Quantify the MPG difference between automatic and manual transmissions"
-
+Quantify the MPG difference between automatic and manual transmissions.
 
 
 ```{r message=FALSE}
@@ -31,99 +28,111 @@ data(mtcars)
 
 The main item of interest in this data set is the effect between transmission type and fuel efficiency.
 
-A simple [boxplot](#plot1) can show that there is a noticeable difference in fuel efficiency between auto and manual transmission types.
 
 ```{r}
 names(mtcars)
 ```
 Info regarding this data set can be found in this [link](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html).
 
+A simple [boxplot](#plot1) can show that there is a noticeable difference in fuel efficiency between auto and manual transmission types.  The boxplot can be found in [plot1](#plot1) at the bottom.
 
-We can also check the probability that this is just an accident of sampling.
-
-```{r}
-t.test(mtcars$mpg~mtcars$am,conf.level=0.95)$p.value
-```
-
-With such a low p-value, we reject the null hypothesis that there is no correlation.  There is very little chance that it is mere coincidence.
-
-There's a lot of confounding factors however.  We can try to determine which factors have the most influence using the variance inflation factor.
+It would also be helpful to take a look at the [pairwise plots](#plot2) of all the variables.  It is noteworthy that many of the variables have a clear correlation, they may not be independent variables.  We can try to use all the variables and check the variance inflation.
 
 ```{r}
 vif(lm(mpg~., mtcars))
 ```
 
-This shows that hp has the most effect, followed by wt.  Intuitively however, we can see that many of these factors are dependent on each other, and as such, removing one or the other could have a significant impact.  A pairwise plot can show that some are strongly correlated.
 
 
-A step function would try several models and automatically determine a best fit.
+# Selecting best fit model
+
+Due to the high number of correlated variables, and due to the high variance inflation, we need a better model.  A step function would try several models by trying different combinations of variables determine a best fit.
 
 ```{r}
 best <- step(lm(mpg ~ ., mtcars),trace=0)
 best$coefficients
-
 ```
 
-The best model that came from the function shows that the best models for predicting efficiency(mpg) includes just wt, qsec, and am as the predictors.  All this, however, is from the assumption that all the other columns are uncorrelated with each other.  A basic understanding of mechanics should give us the intuition that many of these are correlated.  Some would show up in the pairwise function plots, others do not due to the number of confounding variables.  
-
-Based on this intuition, we will add 2 additional variables.  One is the weight to power ratio, a factor that affects acceleration.  The other is the weight to qsec squared, the expected relationship on the assumption that power and distance is constant.
-
-
-```{r}
-mtcars<-mutate(mtcars, hp.wt = hp/wt)
-mtcars<-mutate(mtcars, wt.qsec = wt/(qsec^2))
-step(lm(mpg ~ ., mtcars),trace=0)$coefficients
-```
-
-The inclusion of both ratios did not result in a better model than what we have previously.
-
-While this linear model provides the best prediction we have for the efficiency(mpg), it would also be helpful to see how variance in one factor can affect another.  This is where the variance inflation factor comes in.
+The best model that came from the function shows that the best models for predicting efficiency(mpg) includes just wt, qsec, and am as the predictors.  The variance inflation factor is also much lower than before.
 
 ```{r}
 vif(best)
 ```
 
-What the variance inflation factor shows is that the transmission type has the most impact in modifying the relationship between mpg and the other factors.  qsec has the least impact.  While the small role of qsec is expected, it is also expected that wt would play the biggest role.  As it is, am has a bigger impact, albeit not by a large margin.
 
-Next we can do a residual analysis to see if there is any high leverage or high influence data.
+#Quantifiying the difference
+
+We can check the difference in means as well as whether there is a true difference in means.
+
+```{r}
+a <- t.test(mtcars$mpg~mtcars$am,conf.level=0.95)
+diff <- a$estimate[2] - a$estimate[1]
+cat("Automatic transmission has better mileage with a mean diff of", 
+    + diff, "miles per gallon.")
+cat("The difference has a p-value of", a$p.value, ".")
+```
+
+With such a low p-value, we reject the null hypothesis that there is no true difference in means.
+
+
+# Checking for outliers
+
+Next we can do a residual analysis to see if there is any high leverage or high influence data that could skew the model one way or another.
 
 ```{r}
 mtcars.resid <- resid(step(lm(mpg ~ ., mtcars),trace=0))
 ```
 
-The graph of the residuals can be found be found here.  At first glance, it is not too obvious if there is any high leverage or high influence data plot.  It might be quantifiable with more advanced skills in variance inflation factors.  That is beyond the scope of this lesson.
+The graph of the residuals can be found be found [here](#plot3).  There is no obviously high influence or high leverage value.  The scale on the graph does show that manual and automatic transmission vehicles on this data set are on different weight ranges.
 
 
+#Summary
 
+This analysis of the dataset shows that automatic transmission does have better mileage than manual transmission. Considering that weight is the biggest predictor, and that automatic transmission is on a different weight range from manual transmission, it cannot be used as a strong predictor and may just be an incidental factor.
 
 
 \pagebreak
+
+#Plots
 
 ## Boxplot MPG by Transmission Type {#plot1}
 
 ```{r}
 par(mfcol=c(1,2))
 
-boxplot(mpg ~ am, data = mtcars, xlab = "Transmission Type", ylab = "Miles per gallon", main="MPG by Transmission")
-plot(mtcars$wt, mtcars$qsec, main = "Wt/acceleration comparison")
+boxplot(mpg ~ am, data = mtcars, xlab = "Transmission Type", ylab = "Miles per gallon", 
+         main="MPG by Transmission")
+plot(mtcars$wt, mtcars$qsec, main = "Wt/acceleration comparison", xlab = "Weight(1000 lbs.)", 
+      ylab = "Quarter Mile Time")
 abline(mtcars$wt, mtcars$qsec)
 ```
+
 \pagebreak
-# Pairwise plots of various factors
+
+## Pairwise plots of variables {#plot2}
 
 ```{r}
 pairs(mpg ~ ., data = mtcars)
 ```
 
 \pagebreak
+
+## Residual plots {#plot3}
+
 ```{r message=FALSE}
 x <- mtcars$am == 1
-p1 <- ggplot(mtcars[x,], aes(x=wt, y=qsec)) + geom_point(shape=1) + geom_smooth()           
-p2 <- ggplot(mtcars[!x,], aes(x=wt, y=qsec)) + geom_point(shape=1) + geom_smooth()
-p3 <- ggplot(mtcars[x,], aes(x=wt, y=mtcars.resid[x])) + geom_point(shape=1) + geom_smooth()   
-p4 <- ggplot(mtcars[!x,], aes(x=wt, y=mtcars.resid[!x])) + geom_point(shape=1) + geom_smooth() 
-p5 <- ggplot(mtcars[x,], aes(x=qsec, y=mtcars.resid[x])) + geom_point(shape=1) + geom_smooth()   
-p6 <- ggplot(mtcars[!x,], aes(x=qsec, y=mtcars.resid[!x])) + geom_point(shape=1) + geom_smooth() 
+p1 <- ggplot(mtcars[x,], aes(x=wt, y=qsec)) + geom_point(shape=1) + geom_smooth() 
+p1 <- p1 + xlab("wt(in tons) - auto transmission")          
+p2 <- ggplot(mtcars[!x,], aes(x=wt, y=qsec)) + geom_point(shape=1) + geom_smooth() 
+p2 <- p2 + xlab("wt(in tons) - manual transmission")
+p3 <- ggplot(mtcars[x,], aes(x=wt, y=mtcars.resid[x])) + geom_point(shape=1) 
+p3 <- p3 + geom_smooth()  + ylab("residuals") + xlab("wt(in tons) - auto transmission")
+p4 <- ggplot(mtcars[!x,], aes(x=wt, y=mtcars.resid[!x])) + geom_point(shape=1) 
+p4 <- p4 + geom_smooth() + ylab("residuals")+ xlab("wt(in tons) - manual transmission")
+p5 <- ggplot(mtcars[x,], aes(x=qsec, y=mtcars.resid[x])) + geom_point(shape=1) 
+p5 <- p5 + geom_smooth()   + ylab("residuals") + xlab("qsec(auto transmission)")
+p6 <- ggplot(mtcars[!x,], aes(x=qsec, y=mtcars.resid[!x])) + geom_point(shape=1)  
+p6 <- p6 + geom_smooth() + ylab("residuals") + xlab("qsec(manual transmission)")
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol =2, nrow=3)
-
 ```
+
